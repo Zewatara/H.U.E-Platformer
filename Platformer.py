@@ -102,6 +102,11 @@ grass_sounds = [pygame.mixer.Sound('Sound/SFX/step1.wav'),pygame.mixer.Sound('So
 jump_sounds = [pygame.mixer.Sound('Sound/SFX/jump1.wav'),pygame.mixer.Sound('Sound/SFX/jump2.wav'),pygame.mixer.Sound('Sound/SFX/jump3.wav'),pygame.mixer.Sound('Sound/SFX/jump4.wav'),pygame.mixer.Sound('Sound/SFX/jump5.wav')]
 grass_sounds[0].set_volume(0.2)
 grass_sounds[1].set_volume(0.2)
+jump_sounds[0].set_volume(0.7)
+jump_sounds[1].set_volume(0.7)
+jump_sounds[2].set_volume(0.7)
+jump_sounds[3].set_volume(0.7)
+jump_sounds[4].set_volume(0.7)
 
 pygame.mixer.music.load('Sound/Music/track1.mp3')
 pygame.mixer.music.play(-1)
@@ -213,10 +218,12 @@ while True: # game loop
     #pygame.draw.rect(display,(7,80,75),pygame.Rect(0,120,300,80))
     for background_object in background_objects:
         obj_rect = pygame.Rect(background_object[1][0]-scroll[0]*background_object[0],background_object[1][1]-scroll[1]*background_object[0],background_object[1][2],background_object[1][3])
-        if background_object[0] == 0.5:
-            pygame.draw.rect(display,(155,115,155),obj_rect)
-        else:
-            pygame.draw.rect(display,(224,150,180),obj_rect)
+
+        if game_level == 1: 
+            if background_object[0] == 0.5:
+                pygame.draw.rect(display,(155,115,155),obj_rect)
+            else:
+                pygame.draw.rect(display,(224,150,180),obj_rect)
 
     tile_rects = []
     y = 0

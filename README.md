@@ -1,2 +1,0 @@
-# PAP
-Senior work project
