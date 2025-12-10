@@ -6,17 +6,16 @@ import pygame, sys, os, random
 clock = pygame.time.Clock()
 
 from pygame.locals import *
+
+pygame.init()
+
 pygame.mixer.pre_init(44100, -16, 2, 512)
-pygame.init() # initiates pygame
 pygame.mixer.set_num_channels(12)
 
 pygame.display.set_caption('Hue (Hazardous utopian entity)')
-
 WINDOW_SIZE = (1200,1200)
-
-screen = pygame.display.set_mode(WINDOW_SIZE,0,32) # initiate the window
-
-display = pygame.Surface((400,400)) # used as the surface for rendering, which is scaled
+screen = pygame.display.set_mode(WINDOW_SIZE,0,32)
+display = pygame.Surface((400,400))
 
 loadingLevel = False
 
@@ -26,6 +25,10 @@ vertical_momentum = 0
 air_timer = 0
 
 game_level = 1
+changing_level = False
+screen_filter = False
+scroll_BoundX = 0
+scroll_BoundY = 0
 
 true_scroll = [0,0]
 
@@ -50,7 +53,6 @@ def load_animation(path,frame_durations):
     for frame in frame_durations:
         animation_frame_id = animation_name + '_' + str(n)
         img_loc = path + '/' + animation_frame_id + '.png'
-        # player_animations/idle/idle_0.png
         animation_image = pygame.image.load(img_loc).convert()
         animation_image.set_colorkey((255,255,255))
         animation_frames[animation_frame_id] = animation_image.copy()
@@ -68,12 +70,11 @@ def change_action(action_var,frame,new_value):
 
 animation_database = {}
 
-animation_database['run'] = load_animation('player_animations/run',[7,7])
-animation_database['idle'] = load_animation('player_animations/idle',[7,7,40])
+animation_database['run'] = load_animation('player_animations/level1/run',[7,7])
+animation_database['idle'] = load_animation('player_animations/level1/idle',[7,7,40])
 
-game_map = load_map('stage3')
+game_map = load_map('level1')
 
-#sprites-stage1
 scifi_background_plate = pygame.image.load('Tiles/scifi/scifi_background_plate.png').convert()
 scifi_background_script = pygame.image.load('Tiles/scifi/scifi_background_script.png').convert()
 scifi_background_vent = pygame.image.load('Tiles/scifi/scifi_background_vent.png').convert()
@@ -93,11 +94,11 @@ scifi_weird_wallL = pygame.image.load('Tiles/scifi/scifi_weird_wallL.png').conve
 scifi_weird_wallR = pygame.image.load('Tiles/scifi/scifi_weird_wallR.png').convert()
 scifi_Weirdfloor = pygame.image.load('Tiles/scifi/scifi_Weirdfloor.png').convert()
 stage1_portal = pygame.image.load('Tiles/misc/stage1_portal.png').convert_alpha()
+end_creditsImage = pygame.image.load('Tiles/misc/Credits.png').convert_alpha()
 
 land_sound = pygame.mixer.Sound('Sound/SFX/land.wav')
 portal_sound = pygame.mixer.Sound('Sound/SFX/portal.wav')
 death_sound = pygame.mixer.Sound('Sound/SFX/death.wav')
-#jump_sound = pygame.mixer.Sound('Sound/SFX/jump.wav')
 grass_sounds = [pygame.mixer.Sound('Sound/SFX/step1.wav'),pygame.mixer.Sound('Sound/SFX/step2.wav')]
 jump_sounds = [pygame.mixer.Sound('Sound/SFX/jump1.wav'),pygame.mixer.Sound('Sound/SFX/jump2.wav'),pygame.mixer.Sound('Sound/SFX/jump3.wav'),pygame.mixer.Sound('Sound/SFX/jump4.wav'),pygame.mixer.Sound('Sound/SFX/jump5.wav')]
 grass_sounds[0].set_volume(0.2)
@@ -108,7 +109,7 @@ jump_sounds[2].set_volume(0.7)
 jump_sounds[3].set_volume(0.7)
 jump_sounds[4].set_volume(0.7)
 
-pygame.mixer.music.load('Sound/Music/track1.mp3')
+pygame.mixer.music.load('Sound/Music/track1.wav')
 pygame.mixer.music.play(-1)
 
 player_action = 'idle'
@@ -118,11 +119,10 @@ grounded = False
 
 grass_sound_timer = 0
 
-player_rect = pygame.Rect(30,100,5,13)
-
+player_rect = pygame.Rect(30, 230, 5, 13)
+game_brightness = 255
 TargetColor = [115,89,120]
 background_objects = [[0.25,[120,10,70,400]],[0.25,[280,30,40,400]],[0.5,[30,40,40,400]],[0.5,[130,90,100,400]],[0.5,[300,80,120,400]],[0.25,[420,10,70,400]],[0.25,[580,30,40,400]],[0.5,[420,40,40,400]],[0.5,[430,90,100,400]],[0.5,[700,80,120,400]],[0.5,[1130,40,40,400]],[0.5,[1230,90,100,400]],[0.5,[1400,80,120,400]]]
-#background_objects = [[0,[0,0,0,0]]]
 
 def collision_test(rect,tiles):
     hit_list = []
@@ -153,55 +153,62 @@ def move(rect,movement,tiles):
             collision_types['top'] = True
     return rect, collision_types
 
-while True: # game loop
-
-    if (game_level == 2 and loadingLevel == True):
-        i = 0
-        Target = [153, 204, 255]
-        if Target[0] < TargetColor[0] :
-            i += 1
-            TargetColor[0] += -1 
-        if Target[1] < TargetColor[1] :
-            i += 1
-            TargetColor[1] += -1 
-        if Target[2] < TargetColor[2] :
-            i += 1
-            TargetColor[2] += -1 
-
-        if Target[0] > TargetColor[0] :
-            i += 1
-            TargetColor[0] += 1
-        if Target[1] > TargetColor[1] :
-            i += 1
-            TargetColor[1] += 1
-        if Target[2] > TargetColor[2] :
-            i += 1
-            TargetColor[2] += 1 
-
-        if (i == 0):
-            loadingLevel = False
-
-
-    display.fill(TargetColor) # clear screen by filling it with blue
-
+while True: 
+    display.fill(TargetColor)
+    
     if grass_sound_timer > 0:
         grass_sound_timer -= 1
-
+        
     if (player_rect[1] > 500) :
         if game_level == 1:
             death_sound.play()
-            player_rect = pygame.Rect(30,100,5,13)
-
-    print(player_rect[0])
-    if (player_rect[0] > 6370 and game_level == 1) :
-        load_map('stage2')
-        player_rect = pygame.Rect(30,100,5,13)
-        game_level = 2
-        loadingLevel = True
-        portal_sound.play()
-        pygame.mixer.music.fadeout(1000)
-        pygame.mixer.music.load('Sound/Music/Qente_MASTER.wav')
-        pygame.mixer.music.play(-1, 0, 1000) 
+            player_rect = pygame.Rect(30,150,5,13)  
+        if game_level == 2:
+            death_sound.play()
+            player_rect = pygame.Rect(32, 32, 5, 13)
+        if game_level == 3:
+            death_sound.play()
+            player_rect = pygame.Rect(30,150,5,13) 
+        
+    if (player_rect[0] > 3400 and game_level == 1) :
+        changing_level = True
+        screen_filter = True
+        game_brightness += -5
+        
+        if game_brightness < 0 :
+            game_brightness = 0
+            player_rect = pygame.Rect(32, 32, 5, 13)
+            pygame.mixer.music.fadeout(1000)
+            pygame.mixer.music.load('Sound/Music/track2.wav')
+            game_map = load_map('level2')
+            TargetColor = [40,31,35]
+            animation_database['run'] = load_animation('player_animations/level2/run',[7,7])
+            animation_database['idle'] = load_animation('player_animations/level2/idle',[7,7,40])
+            game_level = 2
+            changing_level = False
+        
+    if (player_rect[0] > 2347 and game_level == 2) :
+        changing_level = True
+        screen_filter = True
+        game_brightness += -5
+        if game_brightness < 0 :
+            game_brightness = 0
+            player_rect = pygame.Rect(32, 32, 5, 13)
+            pygame.mixer.music.fadeout(1000)
+            pygame.mixer.music.load('Sound/Music/track1.wav')
+            game_map = load_map('level3')
+            TargetColor = [40,31,35]
+            animation_database['run'] = load_animation('player_animations/level1/run',[7,7])
+            animation_database['idle'] = load_animation('player_animations/level1/idle',[7,7,40])
+            game_level = 3
+            changing_level = False
+        
+    if (game_brightness < 255) and changing_level == False :
+        game_brightness += 2.5
+        if game_brightness == 255 :
+            pygame.mixer.music.play(-1, fade_ms=2000)
+            game_brightness = 255
+            screen_filter = False
 
     true_scroll[0] += (player_rect.x-true_scroll[0]-152)/20
     true_scroll[1] += (player_rect.y-true_scroll[1]-106)/20
@@ -214,12 +221,14 @@ while True: # game loop
 
     if scroll[1] >= 197 :
         scroll[1] = 197
-
-    #pygame.draw.rect(display,(7,80,75),pygame.Rect(0,120,300,80))
+    
+    if scroll[0] <= -16 :
+        scroll[0] = -16
+        
     for background_object in background_objects:
         obj_rect = pygame.Rect(background_object[1][0]-scroll[0]*background_object[0],background_object[1][1]-scroll[1]*background_object[0],background_object[1][2],background_object[1][3])
 
-        if game_level == 1: 
+        if game_level == 1 or game_level == 3: 
             if background_object[0] == 0.5:
                 pygame.draw.rect(display,(155,115,155),obj_rect)
             else:
@@ -233,7 +242,7 @@ while True: # game loop
 
             if (x*16-scroll[0]-64) < 364 and (x*16-scroll[0]) > -80 :
 
-                if game_level == 1 :
+                if game_level == 1 or game_level == 2 or game_level == 3:
                     if tile == 'q':
                         display.blit(scifi_background_plate,(x*16-scroll[0],y*16-scroll[1]))
                     if tile == 'w':
@@ -272,12 +281,14 @@ while True: # game loop
                         display.blit(scifi_Weirdfloor,(x*16-scroll[0],y*16-scroll[1]))
                     if tile == 'x':
                         display.blit(stage1_portal,(x*16-scroll[0],y*16-scroll[1]))
-                        print(scroll[0])
+                    if tile == 'c':
+                        display.blit(end_creditsImage,(x*16-scroll[0],y*16-scroll[1]))
+
             if tile != '0' and tile != 'x':
                 tile_rects.append(pygame.Rect(x*16,y*16,16,16))
             x += 1
         y += 1
-
+        
     player_movement = [0,0]
     if moving_right == True:
         player_movement[0] += 2
@@ -316,8 +327,7 @@ while True: # game loop
     player_img = animation_frames[player_img_id]
     display.blit(pygame.transform.flip(player_img,player_flip,False),(player_rect.x-scroll[0],player_rect.y-scroll[1]))
 
-
-    for event in pygame.event.get(): # event loop
+    for event in pygame.event.get():
         if event.type == QUIT:
             pygame.quit()
             sys.exit()
@@ -330,12 +340,61 @@ while True: # game loop
                 if air_timer < 6:
                     random.choice(jump_sounds).play()
                     vertical_momentum = -4
+            if event.key == K_a:
+                moving_left = True
+            if event.key == K_d:
+                moving_right = True
+            if event.key == K_SPACE:
+                if air_timer < 6:
+                    random.choice(jump_sounds).play()
+                    vertical_momentum = -4
+            if event.key == K_w:
+                if air_timer < 6:
+                    random.choice(jump_sounds).play()
+                    vertical_momentum = -4
+
+            if event.key == K_1 :
+                animation_database['run'] = load_animation('player_animations/level1/run',[7,7])
+                animation_database['idle'] = load_animation('player_animations/level1/idle',[7,7,40])
+                game_map = load_map('level1') 
+                pygame.mixer.music.load('Sound/Music/track1.wav')
+                pygame.mixer.music.play(-1)
+                player_rect = pygame.Rect(30, 230, 5, 13)
+                TargetColor = [115,89,120]
+                game_level = 1
+
+            if event.key == K_2 :
+                player_rect = pygame.Rect(32, 32, 5, 13)
+                pygame.mixer.music.load('Sound/Music/track2.wav')
+                game_map = load_map('level2')
+                TargetColor = [40,31,35]
+                animation_database['run'] = load_animation('player_animations/level2/run',[7,7])
+                animation_database['idle'] = load_animation('player_animations/level2/idle',[7,7,40])
+                game_level = 2
+                pygame.mixer.music.play(-11)
+
+            if event.key == K_3 :
+                animation_database['run'] = load_animation('player_animations/level1/run',[7,7])
+                animation_database['idle'] = load_animation('player_animations/level1/idle',[7,7,40])
+                game_map = load_map('level3') 
+                pygame.mixer.music.load('Sound/Music/track1.wav')
+                pygame.mixer.music.play(-1)
+                player_rect = pygame.Rect(30, 230, 5, 13)
+                TargetColor = [115,89,120]
+                game_level = 3
+
         if event.type == KEYUP:
             if event.key == K_RIGHT:
                 moving_right = False
             if event.key == K_LEFT:
                 moving_left = False
-        
+            if event.key == K_d:
+                moving_right = False
+            if event.key == K_a:
+                moving_left = False
+                       
     screen.blit(pygame.transform.scale(display,WINDOW_SIZE),(0,0))
+    if screen_filter == True :
+        screen.fill((game_brightness, game_brightness, game_brightness), special_flags=BLEND_MIN)
     pygame.display.update()
     clock.tick(60)
